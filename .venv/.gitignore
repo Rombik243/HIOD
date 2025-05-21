@@ -1,29 +1,8 @@
-# created by virtualenv automatically
-# Виртуальная среда и Python
 .venv/
+.idea/
 __pycache__/
 *.pyc
-
-# IDE
-.idea/
-
-# Логи и резервные копии
 *.log
-*.bak
-
-# Конфиденциальные данные
 *.env
-*.secrets
-
-# Сборка
-build/
-dist/
-*.egg-info/
-
-# macOS
-.DS_Store
-
-# Базы данных
 *.sql
-*.db
-*.sqlite
+.DS_Store
