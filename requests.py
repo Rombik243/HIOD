@@ -33,6 +33,9 @@ def table_print(curs, res):
     print(db.to_string(index=False))
     print()
 
+def case3(order_number):
+
+
 while True:
     requests_print()
     try:
@@ -72,10 +75,40 @@ while True:
             case 3:
                 print("""Введите номер заказа: (от 1 до 555)""")
                 user1_input = int(input())
-                cursor.execute(""""""
-
+                print()
+                cursor.execute(f"SELECT * FROM orders_content WHERE id = {user1_input}")
                 result = cursor.fetchall()
                 table_print(cursor, result)
+                print(result)
+                menu1 = result[0][2]
+                combo1 = result[0][3]
+                menu2 = result[0][4]
+                combo2 = result[0][5]
+                name_id = result[0][1]
+                print(menu1,combo1,menu2,combo2,name_id)
+                #получаем имя заказчика
+                cursor.execute(f"SELECT seller FROM orders WHERE id = {name_id}")
+                result_new = cursor.fetchall()
+                name = result_new[0][0]
+                df = pd.DataFrame(columns=['id', 'name', 'good','count'])
+
+                for i in range(len(menu1)):
+                    cursor.execute(f"SELECT name FROM menu WHERE id = {menu1[i]}")
+                    good = cursor.fetchall()[0][0]
+                    # row = [user1_input, name, good, menu2[i]]
+                    # df = pd.concat([df, pd.DataFrame(row)])
+                    new_row = {'id': user1_input, 'name': name, 'good': good, 'count': menu2[i]}
+                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+
+                for i in range(len(combo1)):
+                    cursor.execute(f"SELECT name FROM combo WHERE id = {menu1[i]}")
+                    good = cursor.fetchall()[0][0]
+                    # row = [user1_input, name, good, menu2[i]]
+                    # df = pd.concat([df, pd.DataFrame(row)])
+                    new_row = {'id': user1_input, 'name': name, 'good': good, 'count': combo2[i]}
+                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                print(df.to_string(index=False))
+                print()
 
 
 
