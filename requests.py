@@ -40,7 +40,7 @@ while True:
     try:
         user_input = int(input())
         if not (0 <= user_input <= 7):
-            raise ValueError("Значение должно быть в пределах от 1 до 7 (включительно)")
+            raise ValueError("Значение должно быть в пределах от 0 до 7 (включительно)")
 
         match user_input:
             case 0:
@@ -108,8 +108,7 @@ while True:
                 for i in range(len(combo1)):
                     cursor.execute(f"SELECT name FROM combo WHERE id = {combo1[i]}")
                     good = cursor.fetchall()[0][0]
-                    # row = [user1_input, name, good, menu2[i]]
-                    # df = pd.concat([df, pd.DataFrame(row)])
+
                     new_row = {'id': user1_input, 'name': name, 'good': good, 'count': combo2[i]}
                     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                 print(df.to_string(index=False))
@@ -153,10 +152,13 @@ while True:
 
 
             case 7:
-                cursor.execute("""SELECT DISTINCT seller FROM orders """)
+                cursor.execute("""SELECT DISTINCT seller FROM orders ORDER BY seller""")
                 result = cursor.fetchall()
                 table_print(cursor, result)
 
     except Exception as e:
         print(f"Ошибка: {e}")
 
+
+conn.close()
+cursor.close()
