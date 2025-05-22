@@ -1,8 +1,10 @@
+# Python
 .venv/
-.idea/
+venv/
 __pycache__/
 *.pyc
-*.log
-*.env
-*.sql
-.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
