@@ -13,7 +13,7 @@ conn = sql.connect(
     port="5432",
     dbname="dbstud",
     user="bk_467685_2025",
-    password="bk_467685",
+    password="...",
 
 )
 conn.autocommit = True  # Для создания БД нужен autocommit
