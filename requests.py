@@ -1,5 +1,6 @@
 import psycopg2 as sql
 import pandas as pd
+import matplotlib.pyplot as plt
 #присоединяемся к базе данных
 conn = sql.connect(
 
@@ -67,6 +68,7 @@ while True:
                         cursor.execute("SELECT id,name,count FROM combo")
                         result = cursor.fetchall()
                         table_print(cursor, result)
+
             case 2:
                 print("""Введите год-месяц-день в формате (2025-05-05)""")
                 user1_input = input()
@@ -84,7 +86,7 @@ while True:
                 print()
                 cursor.execute(f"SELECT * FROM orders_content WHERE id = {user1_input}")
                 result = cursor.fetchall()
-                table_print(cursor, result)
+
 
                 #берём данные из result
                 menu1 = result[0][2]
@@ -142,13 +144,18 @@ while True:
                     WHERE {user1_input} = ANY(id_good); """)
 
                 result = cursor.fetchall()[0][0] or 0
-                user1_input -= 14
+                cursor.execute("SELECT COUNT(*) FROM menu")
+                count_menu = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM combo")
+                count_combo = cursor.fetchone()[0]
+                user1_input -= (count_menu - count_combo)
                 cursor.execute(f"""
                     SELECT SUM(count_combo[array_position(id_combo, {user1_input})])
                     FROM orders_content
                     WHERE {user1_input} = ANY(id_combo); """)
                 result2 = cursor.fetchall()[0][0] or 0
                 print(f'Заказчики приобрели {cake_name} в количестве {result+result2}')
+                print()
 
 
             case 7:
