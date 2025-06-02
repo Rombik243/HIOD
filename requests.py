@@ -1,6 +1,5 @@
 import psycopg2 as sql
 import pandas as pd
-import matplotlib.pyplot as plt
 #присоединяемся к базе данных
 conn = sql.connect(
 
@@ -17,10 +16,10 @@ def requests_print():
     print("""Выберите запрос(введите соответствующую цифру):
     1. Получить все товары определённой категории.
     2. Получить все заказы за определённый день.
-    3. Показать содержимое конкретного заказа.
+    3. Получить детализацию конкретного заказа
     4. Получить заказы, принадлежащие определённому заказчику.
-    5. Получить список всех комбо, с количеством пирожных и их названием.
-    6. Получить сумму заказов определённого торта/пирожного/комбо
+    5. Получить список топ 5 популярных товаров
+    6. Получить отчёт по заказам за месяц с группировкой по магазинам
     7. Получить список всех заказчиков
     
     0. чтобы завершить программу
@@ -81,40 +80,24 @@ while True:
                 result = cursor.fetchall()
                 table_print(cursor, result)
             case 3:
-                print("""Введите номер заказа: (от 1 до 555)""")
+                print("""Введите идентификационный номер заказа: """)
                 user1_input = int(input())
-                print()
-                cursor.execute(f"SELECT * FROM orders_content WHERE id = {user1_input}")
+                cursor.execute(f"""
+                SELECT 'Товар' AS type, m.name, gl.count_good AS count
+                FROM goods_link gl
+                JOIN menu m ON gl.id_good = m.id
+                WHERE gl.order_id = {user1_input}
+                
+                UNION ALL
+                
+                SELECT 'Комбо' AS type, c.name, cl.count_combo AS count
+                FROM combos_link cl
+                JOIN combo c ON cl.id_combo = c.id
+                WHERE cl.order_id ={user1_input};""")
+
                 result = cursor.fetchall()
+                table_print(cursor, result)
 
-
-                #берём данные из result
-                menu1 = result[0][2]
-                combo1 = result[0][3]
-                menu2 = result[0][4]
-                combo2 = result[0][5]
-                name_id = result[0][1]
-                # получаем имя заказчика
-                cursor.execute(f"SELECT seller FROM orders WHERE id = {name_id}")
-                result_new = cursor.fetchall()
-                name = result_new[0][0]
-                df = pd.DataFrame(columns=['id', 'name', 'good', 'count'])
-
-                for i in range(len(menu1)):
-                    cursor.execute(f"SELECT name FROM menu WHERE id = {menu1[i]}")
-                    good = cursor.fetchall()[0][0]
-
-                    new_row = {'id': user1_input, 'name': name, 'good': good, 'count': menu2[i]}
-                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
-                for i in range(len(combo1)):
-                    cursor.execute(f"SELECT name FROM combo WHERE id = {combo1[i]}")
-                    good = cursor.fetchall()[0][0]
-
-                    new_row = {'id': user1_input, 'name': name, 'good': good, 'count': combo2[i]}
-                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                print(df.to_string(index=False))
-                print()
             case 4:
                 print('Введите фамилию заказчика:')
                 user1_input = input()
@@ -123,43 +106,48 @@ while True:
                 table_print(cursor, result)
 
             case 5:
-                cursor.execute(f"""SELECT id,name,count FROM combo """)
+                cursor.execute("""
+                SELECT m.name, SUM(goods_link.count_good) AS total_count
+                FROM goods_link
+                JOIN menu m ON goods_link.id_good = m.id
+                GROUP BY m.name
+                ORDER BY total_count DESC
+                LIMIT 5;""")
                 result = cursor.fetchall()
                 table_print(cursor, result)
 
             case 6:
-                print('Выберите кондитерское изделие, введите id')
-                cursor.execute("SELECT id,name,category FROM menu")
-                columns = [x[0] for x in cursor.description]
+                print("""Введите год-месяц в формате (2025-05)""")
+                user1_input = input()
+                user1_input += '-01'
+                query = """
+                        SELECT seller, 
+                               COUNT(*) AS orders_count, 
+                               SUM( 
+                                       (SELECT COALESCE(SUM(gl.count_good), 0) 
+                                        FROM goods_link gl 
+                                        WHERE gl.order_id = o.id) + 
+                                       (SELECT COALESCE(SUM(cl.count_combo), 0) 
+                                        FROM combos_link cl 
+                                        WHERE cl.order_id = o.id) 
+                               )        AS items_count
+                        FROM orders o
+                        WHERE time_order BETWEEN
+                                  TO_TIMESTAMP(%s, 'YYYY-MM-DD')
+                                  AND
+                                  (TO_TIMESTAMP(%s, 'YYYY-MM-DD') + INTERVAL '1 month - 1 day')
+                        GROUP BY seller
+                        ORDER BY orders_count DESC; 
+                        """
+
+                # Выполняем запрос с параметрами
+                cursor.execute(query, (user1_input, user1_input))
                 result = cursor.fetchall()
-                db = pd.DataFrame(result, columns=columns)
-                print(db.to_string(index=False))
-                user1_input = int(input())
-                cursor.execute(f"""SELECT name FROM menu WHERE id = {user1_input}""")
-                cake_name = cursor.fetchall()[0][0]
-
-                cursor.execute(f"""
-                    SELECT SUM(count_good[array_position(id_good, {user1_input})])
-                    FROM orders_content
-                    WHERE {user1_input} = ANY(id_good); """)
-
-                result = cursor.fetchall()[0][0] or 0
-                cursor.execute("SELECT COUNT(*) FROM menu")
-                count_menu = cursor.fetchone()[0]
-                cursor.execute("SELECT COUNT(*) FROM combo")
-                count_combo = cursor.fetchone()[0]
-                user1_input -= (count_menu - count_combo)
-                cursor.execute(f"""
-                    SELECT SUM(count_combo[array_position(id_combo, {user1_input})])
-                    FROM orders_content
-                    WHERE {user1_input} = ANY(id_combo); """)
-                result2 = cursor.fetchall()[0][0] or 0
-                print(f'Заказчики приобрели {cake_name} в количестве {result+result2}')
-                print()
-
+                table_print(cursor, result)
 
             case 7:
-                cursor.execute("""SELECT DISTINCT seller FROM orders ORDER BY seller""")
+                cursor.execute("""SELECT DISTINCT seller FROM orders""")
+
                 result = cursor.fetchall()
                 table_print(cursor, result)
 

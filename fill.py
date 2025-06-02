@@ -1,9 +1,10 @@
 import psycopg2 as sql
 def drop():
-    cursor.execute("DROP TABLE IF EXISTS menu")
-    cursor.execute("DROP TABLE IF EXISTS combo")
-    cursor.execute("DROP TABLE IF EXISTS orders_content")
-    cursor.execute("DROP TABLE IF EXISTS orders")
+    cursor.execute("DROP TABLE IF EXISTS menu CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS combo CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS orders CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS goods_link CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS combos_link CASCADE;")
 
 # Подключаемся к серверу PostgreSQL (без указания dbname!)
 
@@ -23,9 +24,10 @@ cursor = conn.cursor()
 drop()
 # SQL-запрос для создания таблицы
 create_table_query = """CREATE TABLE menu (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL, category VARCHAR(20) NOT NULL, subcategory BOOL);
-                        CREATE TABLE combo(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL, cake_id SMALLINT, count SMALLINT);
-                        CREATE TABLE orders_content(id SERIAL PRIMARY KEY, orders_id INTEGER, id_good SMALLINT[], id_combo SMALLINT[], count_good SMALLINT[], count_combo SMALLINT[]);
-                        CREATE TABLE orders(id SERIAL PRIMARY KEY, time_order TIMESTAMP, time_deliv TIMESTAMP, address VARCHAR(80), seller VARCHAR(80));"""
+                        CREATE TABLE combo(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL REFERENCES menu(name), cake_id INT REFERENCES menu(id), count INT);
+                        CREATE TABLE orders(id SERIAL PRIMARY KEY, time_order TIMESTAMP, time_deliv TIMESTAMP, address VARCHAR(80), seller VARCHAR(80));
+                        CREATE TABLE goods_link(order_id INT NOT NULL REFERENCES orders(id), id_good INT REFERENCES menu(id) NOT NULL, count_good INT NOT NULL, PRIMARY KEY(order_id, id_good));
+                        CREATE TABLE combos_link(order_id INT NOT NULL REFERENCES orders(id), id_combo INT NOT NULL REFERENCES combo(id), count_combo INT NOT NULL, PRIMARY KEY(order_id, id_combo));"""
 
 # Выполняем запрос
 cursor.execute(create_table_query)
@@ -54,9 +56,17 @@ with open("orders.csv", "r", encoding = 'utf-8') as f:
         CSV HEADER;
     """, f)
 
-with open("orders_content.csv", "r", encoding = 'utf-8') as f:
+with open("goods_link.csv", "r", encoding = 'utf-8') as f:
     cursor.copy_expert("""
-        COPY orders_content (id, orders_id, id_good, id_combo, count_good, count_combo)
+        COPY goods_link (order_id, id_good, count_good)
+        FROM STDIN
+        DELIMITER ','
+        CSV HEADER;
+    """, f)
+
+with open("combos_link.csv", "r", encoding = 'utf-8') as f:
+    cursor.copy_expert("""
+        COPY combos_link (order_id, id_combo, count_combo)
         FROM STDIN
         DELIMITER ','
         CSV HEADER;

@@ -22,12 +22,11 @@ def generate_orders_content_csv(filename):
             count_combo = [random.randint(1, 5) for _ in range(num_combos)]
 
             # Преобразование списков в строку в SQL-совместимом формате
-            id_good_str = "{" + ",".join(map(str, id_good)) + "}"
-            id_combo_str = "{" + ",".join(map(str, id_combo)) + "}"
-            count_good_str = "{" + ",".join(map(str, count_good)) + "}"
-            count_combo_str = "{" + ",".join(map(str, count_combo)) + "}"
+            id_good_str = "{" + ",".join(map(str, [x for x in set(id_good)])) + "}"
+            id_combo_str = "{" + ",".join(map(str, [x for x in set(id_combo)])) + "}"
+            count_good_str = "{" + ",".join(map(str, [count_good[i] for i in range(len(set(id_good)))])) + "}"
+            count_combo_str = "{" + ",".join(map(str, [count_combo[i] for i in range(len(set(id_combo)))])) + "}"
 
             writer.writerow([i, order_id, id_good_str, id_combo_str, count_good_str, count_combo_str])
-
 # Вызов генерации
-generate_orders_content_csv("orders_content.csv")
+generate_orders_content_csv(".venv/orders_content.csv")
